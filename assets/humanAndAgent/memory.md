@@ -23,6 +23,15 @@ XDG_RUNTIME_DIR=terra-wm/.runtime WAYLAND_DISPLAY=wayland-0 WINIT_UNIX_BACKEND=w
   LIBGL_ALWAYS_SOFTWARE=1 terra-wm -c target/debug/examples/test_client
 ```
 verified: client connects, receives configure, 5 frame callbacks, exit 0
+verified on host (tty2, 2026/8/17): bare run errors out (expected, winit needs a host);
+  DISPLAY=:0 WINIT_UNIX_BACKEND=x11 works, `-c konsole` launches real Qt client inside compositor
+
+## architecture decision (2026/8/17)
+- DRM/udev backend DEFERRED: smithay separates backend from compositor logic, our backend
+  seam is already clean (only winit.rs / render.rs / main.rs touch backend types)
+- rule: future milestones (stacking/tiling/layers/infinity) must never leak backend types
+  into state.rs / handlers.rs / desktop logic; when DRM comes, add Backend trait + udev.rs
+  anvil-style, window-management code stays untouched. DRM will include libinput input.
 
 ## smithay 0.7.0 api notes
 - per-protocol macros `delegate_compositor!` `delegate_xdg_shell!` `delegate_shm!` (NOT `delegate_dispatch2!`, that is master-only)
