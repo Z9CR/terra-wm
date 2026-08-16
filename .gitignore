@@ -1,1 +1,5 @@
 /target
+/.cargo-home
+/.scratch-fetch
+/.tmp
+/.runtime
