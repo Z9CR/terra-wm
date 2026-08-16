@@ -8,13 +8,17 @@ use smithay::{
     wayland::{
         buffer::BufferHandler,
         compositor::{
-            CompositorClientState, CompositorHandler, CompositorState, get_parent, is_sync_subsurface,
+            CompositorClientState, CompositorHandler, CompositorState, get_parent,
+            is_sync_subsurface,
         },
         shm::{ShmHandler, ShmState},
     },
 };
 
-use crate::{grabs::resize_grab, state::{ClientState, TerraWm}};
+use crate::{
+    grabs::resize_grab,
+    state::{ClientState, TerraWm},
+};
 
 use super::xdg_shell;
 

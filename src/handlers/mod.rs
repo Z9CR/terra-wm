@@ -6,7 +6,7 @@ use std::os::unix::io::OwnedFd;
 use smithay::{
     delegate_data_device, delegate_output, delegate_pointer_constraints, delegate_seat,
     input::{Seat, SeatHandler, SeatState, pointer::CursorImageStatus},
-    reexports::wayland_server::{protocol::wl_surface::WlSurface, Resource},
+    reexports::wayland_server::{Resource, protocol::wl_surface::WlSurface},
     utils::{Logical, Point},
     wayland::{
         output::OutputHandler,
@@ -42,7 +42,12 @@ impl SeatHandler for TerraWm {
 }
 
 impl PointerConstraintsHandler for TerraWm {
-    fn new_constraint(&mut self, _surface: &WlSurface, _pointer: &smithay::input::pointer::PointerHandle<Self>) {}
+    fn new_constraint(
+        &mut self,
+        _surface: &WlSurface,
+        _pointer: &smithay::input::pointer::PointerHandle<Self>,
+    ) {
+    }
 
     fn cursor_position_hint(
         &mut self,

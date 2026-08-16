@@ -23,9 +23,7 @@ pub fn init_winit(
         refresh: 60_000,
     };
 
-    let _global = state
-        .output
-        .create_global::<TerraWm>(&state.display_handle);
+    let _global = state.output.create_global::<TerraWm>(&state.display_handle);
     state.output.change_current_state(
         Some(mode),
         Some(Transform::Flipped180),
@@ -38,28 +36,30 @@ pub fn init_winit(
 
     let mut damage_tracker = OutputDamageTracker::from_output(&state.output);
 
-    event_loop.handle().insert_source(winit, move |event, _, state| {
-        match event {
-            WinitEvent::Resized { size, .. } => {
-                state.output.change_current_state(
-                    Some(Mode {
-                        size,
-                        refresh: 60_000,
-                    }),
-                    None,
-                    None,
-                    None,
-                );
-            }
-            WinitEvent::Input(event) => state.process_input_event(event),
-            WinitEvent::Redraw => {
-                render_frame(&mut backend, state, &mut damage_tracker);
-                backend.window().request_redraw();
-            }
-            WinitEvent::CloseRequested => state.loop_signal.stop(),
-            _ => (),
-        };
-    })?;
+    event_loop
+        .handle()
+        .insert_source(winit, move |event, _, state| {
+            match event {
+                WinitEvent::Resized { size, .. } => {
+                    state.output.change_current_state(
+                        Some(Mode {
+                            size,
+                            refresh: 60_000,
+                        }),
+                        None,
+                        None,
+                        None,
+                    );
+                }
+                WinitEvent::Input(event) => state.process_input_event(event),
+                WinitEvent::Redraw => {
+                    render_frame(&mut backend, state, &mut damage_tracker);
+                    backend.window().request_redraw();
+                }
+                WinitEvent::CloseRequested => state.loop_signal.stop(),
+                _ => (),
+            };
+        })?;
 
     Ok(())
 }
