@@ -6,7 +6,7 @@
    ask the user(just ask them, is premium-free) then make the note(ask the user beforehand)
 
 ## terra-wm should imple these feats(sorted as importance):
-0. call smithay to render wl-compositor
+0. call smithay to render wl-compositor    [2026/8/17]-[done]
 1. Window-Stacking in one screen
 2. Dynamic-Tiling in one screen
 3. multi-layers overlay
