@@ -35,13 +35,27 @@ verified on host (tty2, 2026/8/17): bare run errors out (expected, winit needs a
 
 ## smithay 0.7.0 api notes
 - per-protocol macros `delegate_compositor!` `delegate_xdg_shell!` `delegate_shm!` (NOT `delegate_dispatch2!`, that is master-only)
+- Rust 2024: delegate macros must be `use`d explicitly (e.g. `use smithay::delegate_seat;`)
 - calloop 0.14: `Generic` lives at `calloop::generic::Generic`
 - `delegate_xdg_shell!` forces `SeatHandler` impl (XdgPopup dispatch bound); no seat global needed
 - winit backend requires GL: `winit::init_from_attributes::<GlesRenderer>(attrs)`
 - `WinitEventLoop` is a calloop EventSource; render on `WinitEvent::Redraw`, `request_redraw()` after each frame
 - `ShmState::new::<Self>(&dh, vec![])`; `CompositorState::new::<Self>(&dh)`; `XdgShellState::new::<Self>(&dh)`
-- render: `render_elements_from_surface_tree` + `draw_render_elements`, `Transform::Flipped180` into winit window
-- frame callbacks: `send_frames_surface_tree` via `SurfaceAttributes.frame_callbacks`
+- `delegate_output!` covers wl_output AND xdg_output; `Output::create_global::<D>(&dh)` registers an output
+- `OutputManagerState::new_with_xdg_output` has no Drop side effects: dropping it does NOT remove the global
+- `PhysicalProperties` in 0.7.0 has NO `serial_number` field (master only)
+- `PointerConstraintsHandler` in 0.7.0 requires `new_constraint` + `cursor_position_hint` (master has defaults)
+- `DataDeviceHandler::data_device_state(&self) -> &DataDeviceState` (not &mut)
+- DnD in 0.7.0: `start_drag` auto-creates+sets DnDGrab internally; just impl `ClientDndGrabHandler` (started/dropped) + `ServerDndGrabHandler` (send); NO `DndGrabHandler`/`GrabType`/`Source` (master-only)
+- `SeatState::new_wl_seat(&dh, name)` creates seat + wl_seat global; `add_keyboard(Default::default(), 200, 25)` / `add_pointer()`
+- input processing: generic `process_input_event<I: InputBackend>` (winit today, libinput later with zero changes)
+- render: `desktop::space::render_output` with `OutputDamageTracker::from_output`, space mapped output, `Window::send_frame`
+- ToplevelSurface has no `title()` accessor in 0.7.0 (title lives in XdgToplevelSurfaceData)
+
+## milestone: input support (2026/8/17)
+- reached smallvil parity: seat(kbd+ptr), winit input, Space+Output+xdg_output, move/resize grabs, popups, data device+dnd
+- verified nested under labwc headless: konsole opens real window ("new toplevel"), test client 5 frames, 0 errors
+- human.md new rule: run `cargo fmt` after coding
 
 ## pitfalls
 - `cargo build --example` does NOT rebuild the main bin (stale `Hello, world!` binary bit us)
