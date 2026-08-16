@@ -51,6 +51,19 @@ verified on host (tty2, 2026/8/17): bare run errors out (expected, winit needs a
 - input processing: generic `process_input_event<I: InputBackend>` (winit today, libinput later with zero changes)
 - render: `desktop::space::render_output` with `OutputDamageTracker::from_output`, space mapped output, `Window::send_frame`
 - ToplevelSurface has no `title()` accessor in 0.7.0 (title lives in XdgToplevelSurfaceData)
+- layer-shell (wlr_layer): `WlrLayerShellState::new::<D>(&dh)`, trait uses PROTOCOL `wlr_layer::LayerSurface`
+  (desktop wrapper built via `LayerSurface::new(surface, namespace)`); `delegate_layer_shell!`
+- LayerMap: `map_layer`/`unmap_layer`/`arrange`; arrange only sends configure AFTER initial configure
+  (spec: initial configure must follow first commit); commit handler: arrange + `send_pending_configure()`
+  (returns Some while `!initial_configure_sent`)
+- layer rendering is automatic: `space_render_elements` z-orders Background/Bottom below windows,
+  Top/Overlay above; just map into LayerMap + send frame callbacks per layer surface
+- `-c` spawn: use `sh -c` (Command::new treats whole string as executable, breaks multi-word args)
+
+## milestone: wlr-layer-shell (2026/8/17)
+- swaybg -c '#66ccff' now works (was "missing a required Wayland interface": swaybg is a
+  layer-shell client, needs zwlr_layer_shell_v1)
+- groundwork for goal feat 3 (multi-layers overlay) / 4 (switch two layers)
 
 ## milestone: input support (2026/8/17)
 - reached smallvil parity: seat(kbd+ptr), winit input, Space+Output+xdg_output, move/resize grabs, popups, data device+dnd
