@@ -1,11 +1,10 @@
 use std::{fs::File, os::unix::io::AsFd};
 
 use wayland_client::{
-    delegate_noop,
+    Connection, Dispatch, QueueHandle, delegate_noop,
     protocol::{
         wl_buffer, wl_callback, wl_compositor, wl_registry, wl_shm, wl_shm_pool, wl_surface,
     },
-    Connection, Dispatch, QueueHandle,
 };
 
 use wayland_protocols::xdg::shell::client::{xdg_surface, xdg_toplevel, xdg_wm_base};
@@ -61,7 +60,10 @@ impl Dispatch<wl_registry::WlRegistry, ()> for State {
         _: &Connection,
         qh: &QueueHandle<Self>,
     ) {
-        if let wl_registry::Event::Global { name, interface, .. } = event {
+        if let wl_registry::Event::Global {
+            name, interface, ..
+        } = event
+        {
             match &interface[..] {
                 "wl_compositor" => {
                     let compositor =
@@ -215,7 +217,8 @@ fn draw(tmp: &mut File, (buf_x, buf_y): (u32, u32)) {
             let r = min(((buf_x - x) * 0xFF) / buf_x, ((buf_y - y) * 0xFF) / buf_y);
             let g = min((x * 0xFF) / buf_x, ((buf_y - y) * 0xFF) / buf_y);
             let b = min(((buf_x - x) * 0xFF) / buf_x, (y * 0xFF) / buf_y);
-            buf.write_all(&[b as u8, g as u8, r as u8, a as u8]).unwrap();
+            buf.write_all(&[b as u8, g as u8, r as u8, a as u8])
+                .unwrap();
         }
     }
     buf.flush().unwrap();

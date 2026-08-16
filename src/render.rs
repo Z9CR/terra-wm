@@ -43,7 +43,9 @@ pub fn render_frame(backend: &mut WinitGraphicsBackend<GlesRenderer>, state: &mu
         let mut frame = renderer
             .render(&mut framebuffer, size, Transform::Flipped180)
             .unwrap();
-        frame.clear(Color32F::new(0.1, 0.1, 0.1, 1.0), &[damage]).unwrap();
+        frame
+            .clear(Color32F::new(0.1, 0.1, 0.1, 1.0), &[damage])
+            .unwrap();
         draw_render_elements(&mut frame, 1.0, &elements, &[damage]).unwrap();
         let _ = frame.finish().unwrap();
     }

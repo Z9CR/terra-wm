@@ -1,4 +1,4 @@
-# how to write code
+# How to write code
 0. **use half-width punctuation marks**
 1. no `return sth`, just `sth`
 2. `camelNaming` for all the traits, structs, unions
@@ -9,7 +9,10 @@
 7. one line should not contain more than 100 chars
 8. `mut` less bug less
 
-# how to git
+# How to git
 1. every small step should be commit
 2. use `fix:`, `feat:`, `refactor:`, `chore:`
 3. add prefix `(dev)` for incompleted feat's commit (like "(dev)fix:...")
+
+# Format the code
+* run `cargo fmt` after coding
