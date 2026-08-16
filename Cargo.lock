@@ -1407,6 +1407,7 @@ dependencies = [
 name = "terra-wm"
 version = "0.1.0"
 dependencies = [
+ "bitflags 2.13.1",
  "smithay",
  "tempfile",
  "tracing",

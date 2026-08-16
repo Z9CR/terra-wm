@@ -1,4 +1,6 @@
+mod grabs;
 mod handlers;
+mod input;
 mod render;
 mod state;
 mod winit;
@@ -13,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let display = Display::new()?;
     let mut state = TerraWm::new(&mut event_loop, display);
 
-    crate::winit::init_winit(&mut event_loop)?;
+    crate::winit::init_winit(&mut event_loop, &mut state)?;
     unsafe { std::env::set_var("WAYLAND_DISPLAY", &state.socket_name) };
 
     spawn_client();

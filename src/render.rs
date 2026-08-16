@@ -1,83 +1,56 @@
+use std::time::Duration;
+
 use smithay::{
     backend::{
         renderer::{
-            Color32F, Frame, Renderer,
-            element::{
-                Kind,
-                surface::{WaylandSurfaceRenderElement, render_elements_from_surface_tree},
-            },
+            damage::OutputDamageTracker,
+            element::surface::WaylandSurfaceRenderElement,
             gles::GlesRenderer,
-            utils::draw_render_elements,
         },
         winit::WinitGraphicsBackend,
     },
-    reexports::wayland_server::protocol::wl_surface::WlSurface,
-    utils::{Rectangle, Transform},
-    wayland::compositor::{SurfaceAttributes, TraversalAction, with_surface_tree_downward},
+    desktop::space::render_output,
+    utils::Rectangle,
 };
 
 use crate::state::TerraWm;
 
-pub fn render_frame(backend: &mut WinitGraphicsBackend<GlesRenderer>, state: &mut TerraWm) {
+pub fn render_frame(
+    backend: &mut WinitGraphicsBackend<GlesRenderer>,
+    state: &mut TerraWm,
+    damage_tracker: &mut OutputDamageTracker,
+) {
     let size = backend.window_size();
     let damage = Rectangle::from_size(size);
 
     {
         let (renderer, mut framebuffer) = backend.bind().unwrap();
-        let elements = state
-            .xdg_shell_state
-            .toplevel_surfaces()
-            .iter()
-            .flat_map(|surface| {
-                render_elements_from_surface_tree(
-                    renderer,
-                    surface.wl_surface(),
-                    (0, 0),
-                    1.0,
-                    1.0,
-                    Kind::Unspecified,
-                )
-            })
-            .collect::<Vec<WaylandSurfaceRenderElement<GlesRenderer>>>();
-
-        let mut frame = renderer
-            .render(&mut framebuffer, size, Transform::Flipped180)
-            .unwrap();
-        frame
-            .clear(Color32F::new(0.1, 0.1, 0.1, 1.0), &[damage])
-            .unwrap();
-        draw_render_elements(&mut frame, 1.0, &elements, &[damage]).unwrap();
-        let _ = frame.finish().unwrap();
+        render_output::<_, WaylandSurfaceRenderElement<GlesRenderer>, _, _>(
+            &state.output,
+            renderer,
+            &mut framebuffer,
+            1.0,
+            0,
+            [&state.space],
+            &[],
+            damage_tracker,
+            [0.1, 0.1, 0.1, 1.0],
+        )
+        .unwrap();
     }
 
-    for surface in state.xdg_shell_state.toplevel_surfaces() {
-        send_frames_surface_tree(
-            surface.wl_surface(),
-            state.start_time.elapsed().as_millis() as u32,
-        );
-    }
+    state.space.elements().for_each(|window| {
+        window.send_frame(
+            &state.output,
+            state.start_time.elapsed(),
+            Some(Duration::ZERO),
+            |_, _| Some(state.output.clone()),
+        )
+    });
 
+    state.space.refresh();
+    state.popups.cleanup();
     let _ = state.display_handle.flush_clients();
 
     backend.submit(Some(&[damage])).unwrap();
-}
-
-pub fn send_frames_surface_tree(surface: &WlSurface, time: u32) {
-    with_surface_tree_downward(
-        surface,
-        (),
-        |_, _, &()| TraversalAction::DoChildren(()),
-        |_surf, states, &()| {
-            for callback in states
-                .cached_state
-                .get::<SurfaceAttributes>()
-                .current()
-                .frame_callbacks
-                .drain(..)
-            {
-                callback.done(time);
-            }
-        },
-        |_, _, &()| true,
-    );
 }
