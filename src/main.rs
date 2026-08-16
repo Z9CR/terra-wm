@@ -36,7 +36,9 @@ fn spawn_client() {
     let mut args = std::env::args().skip(1);
     match (args.next().as_deref(), args.next()) {
         (Some("-c") | Some("--command"), Some(command)) => {
-            if let Err(e) = std::process::Command::new(command).spawn() {
+            let mut cmd = std::process::Command::new("sh");
+            cmd.arg("-c").arg(command);
+            if let Err(e) = cmd.spawn() {
                 tracing::warn!(error = %e, "failed to spawn client");
             }
         }

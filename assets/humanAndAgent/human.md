@@ -2,7 +2,7 @@
 0. **use half-width punctuation marks**
 1. no `return sth`, just `sth`
 2. `camelNaming` for all the traits, structs, unions
-3. `snake_case` for all the instances of structure
+3. `snake_case` for all the instances of structure and functions/implements
 4. one module one feature
 5. no comment if name have explaned itself
 6. use `2` and `4` to replace `to` and `for`

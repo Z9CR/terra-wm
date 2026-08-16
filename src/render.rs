@@ -8,7 +8,7 @@ use smithay::{
         },
         winit::WinitGraphicsBackend,
     },
-    desktop::space::render_output,
+    desktop::{layer_map_for_output, space::render_output},
     utils::Rectangle,
 };
 
@@ -46,6 +46,16 @@ pub fn render_frame(
             |_, _| Some(state.output.clone()),
         )
     });
+
+    let map = layer_map_for_output(&state.output);
+    for layer_surface in map.layers() {
+        layer_surface.send_frame(
+            &state.output,
+            state.start_time.elapsed(),
+            Some(Duration::ZERO),
+            |_, _| Some(state.output.clone()),
+        );
+    }
 
     state.space.refresh();
     state.popups.cleanup();

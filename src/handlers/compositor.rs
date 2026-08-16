@@ -1,6 +1,7 @@
 use smithay::{
     backend::renderer::utils::on_commit_buffer_handler,
     delegate_compositor, delegate_shm,
+    desktop::{Space, Window, WindowSurfaceType, layer_map_for_output},
     reexports::wayland_server::{
         Client,
         protocol::{wl_buffer, wl_surface::WlSurface},
@@ -49,6 +50,21 @@ impl CompositorHandler for TerraWm {
 
         xdg_shell::handle_commit(&mut self.popups, &self.space, surface);
         resize_grab::handle_commit(&mut self.space, surface);
+        handle_layer_commit(&mut self.space, surface);
+    }
+}
+
+fn handle_layer_commit(space: &mut Space<Window>, surface: &WlSurface) {
+    if let Some(output) = space.outputs().find(|o| {
+        layer_map_for_output(o)
+            .layer_for_surface(surface, WindowSurfaceType::TOPLEVEL)
+            .is_some()
+    }) {
+        let mut map = layer_map_for_output(output);
+        map.arrange();
+        if let Some(layer) = map.layer_for_surface(surface, WindowSurfaceType::TOPLEVEL) {
+            layer.layer_surface().send_pending_configure();
+        }
     }
 }
 

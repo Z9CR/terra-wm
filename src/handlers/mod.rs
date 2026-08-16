@@ -1,4 +1,5 @@
 mod compositor;
+mod wlr_layer;
 mod xdg_shell;
 
 use std::os::unix::io::OwnedFd;
