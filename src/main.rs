@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let display = Display::new()?;
     let mut state = TerraWm::new(&mut event_loop, display);
 
-    crate::winit::init_winit(&mut event_loop, &mut state)?;
+    crate::winit::init_winit(&mut event_loop)?;
     unsafe { std::env::set_var("WAYLAND_DISPLAY", &state.socket_name) };
 
     spawn_client();
@@ -34,7 +34,9 @@ fn spawn_client() {
     let mut args = std::env::args().skip(1);
     match (args.next().as_deref(), args.next()) {
         (Some("-c") | Some("--command"), Some(command)) => {
-            std::process::Command::new(command).spawn().ok();
+            if let Err(e) = std::process::Command::new(command).spawn() {
+                tracing::warn!(error = %e, "failed to spawn client");
+            }
         }
         _ => (),
     }

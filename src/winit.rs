@@ -10,7 +10,6 @@ use crate::{render::render_frame, state::TerraWm};
 
 pub fn init_winit(
     event_loop: &mut EventLoop<TerraWm>,
-    _state: &mut TerraWm,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (mut backend, winit) = winit::init_from_attributes::<GlesRenderer>(
         WindowAttributes::default().with_title("terra-wm"),
