@@ -73,3 +73,17 @@ verified on host (tty2, 2026/8/17): bare run errors out (expected, winit needs a
 ## pitfalls
 - `cargo build --example` does NOT rebuild the main bin (stale `Hello, world!` binary bit us)
 - `pkill -f "target/debug/terra-wm"` kills the calling shell too (pattern matches its own cmdline)
+
+## architecture decisions (2026/8/18, from goal.md update)
+- `layer` (proper noun): an INFINITE 2D plane, internally one `Space<Window>`; monitors are just
+  VIEWPORTS into the layer (global layer, shown on all monitors)
+- layer properties (user-editable): `window_layout_type` (tiling|stacked), `VFX_handler`, `theme`
+- multi-layer model: `Vec<Layer>` rendered bottom-up; "switch two layers" = swap two Vec elements
+- feat 1 (stacking) marked DONE [2026/8/17]: basic click-to-raise stacking; more features added gradually
+- feat 5/6 renamed: infinity-screen -> infinity-layer (layer is infinite; translation moves viewport/layer)
+- implementation order: feat 2 (dynamic tiling) FIRST on the existing single Space (no refactor yet),
+  then layer abstraction (feats 3/4/5/6); pan input = touchpad gestures AND keyboard shortcuts
+- tiling: grid-layout; each tiled window max size = smallest monitor size (layer infinite + viewable on
+  any monitor -> tiles must fit smallest viewport)
+- VFX_handler interface: PENDING discussion (option 1: external process + shm/dmabuf frame passing,
+  option 3: wayland-client style frame round-trip)
