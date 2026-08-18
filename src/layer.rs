@@ -108,10 +108,16 @@ impl Layer {
             })
     }
 
-    pub fn resize_delta(&mut self, output: &Output, window: &Window, delta: i32) {
+    pub fn resize_window(
+        &mut self,
+        output: &Output,
+        window: &Window,
+        new_width: i32,
+        left_edge: bool,
+    ) {
         if self.layout_type == LayoutType::Tiling {
             self.tiling
-                .resize_delta(&mut self.space, output, window, delta);
+                .resize_window(&mut self.space, output, window, new_width, left_edge);
         }
     }
 }

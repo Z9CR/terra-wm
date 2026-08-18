@@ -127,10 +127,23 @@ impl XdgShellHandler for TerraWm {
                 .clone();
 
             if self.layer_stack[layer_idx].layout_type == LayoutType::Tiling {
+                let initial_width = self.layer_stack[layer_idx]
+                    .tiling
+                    .width_of(&window)
+                    .unwrap_or(0);
+                let left_edge = matches!(
+                    edges,
+                    xdg_toplevel::ResizeEdge::Left
+                        | xdg_toplevel::ResizeEdge::TopLeft
+                        | xdg_toplevel::ResizeEdge::BottomLeft
+                );
+
                 let grab = TilingResizeGrab {
                     start_data,
                     window,
                     layer_idx,
+                    initial_width,
+                    left_edge,
                 };
                 pointer.set_grab(self, grab, serial, Focus::Clear);
                 return;

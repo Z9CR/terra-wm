@@ -16,6 +16,8 @@ pub struct TilingResizeGrab {
     pub start_data: PointerGrabStartData<TerraWm>,
     pub window: Window,
     pub layer_idx: usize,
+    pub initial_width: i32,
+    pub left_edge: bool,
 }
 
 impl PointerGrab<TerraWm> for TilingResizeGrab {
@@ -29,7 +31,17 @@ impl PointerGrab<TerraWm> for TilingResizeGrab {
         handle.motion(data, None, event);
 
         let delta = (event.location.x - self.start_data.location.x) as i32;
-        data.layer_stack[self.layer_idx].resize_delta(&data.output, &self.window, delta);
+        let new_width = if self.left_edge {
+            self.initial_width - delta
+        } else {
+            self.initial_width + delta
+        };
+        data.layer_stack[self.layer_idx].resize_window(
+            &data.output,
+            &self.window,
+            new_width,
+            self.left_edge,
+        );
     }
 
     fn relative_motion(

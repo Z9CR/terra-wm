@@ -84,29 +84,41 @@ impl TilingLayout {
         self.focused.map(|idx| self.windows[idx].window.clone())
     }
 
-    pub fn resize_delta(
+    pub fn width_of(&self, window: &Window) -> Option<i32> {
+        self.windows
+            .iter()
+            .find(|slot| &slot.window == window)
+            .map(|slot| slot.width)
+    }
+
+    /// Resize a window to an absolute target width; the adjacent window
+    /// compensates. `left_edge` selects which neighbor compensates and which
+    /// way the delta moves the border.
+    pub fn resize_window(
         &mut self,
         space: &mut Space<Window>,
         output: &Output,
         window: &Window,
-        delta: i32,
+        new_width: i32,
+        left_edge: bool,
     ) {
         let Some(idx) = self.windows.iter().position(|slot| &slot.window == window) else {
             return;
         };
         let n = self.windows.len();
-        let neighbor = if idx + 1 < n {
-            idx + 1
-        } else if idx > 0 {
-            idx - 1
+        let neighbor = if left_edge {
+            idx.checked_sub(1)
         } else {
+            (idx + 1 < n).then_some(idx + 1)
+        };
+        let Some(neighbor) = neighbor else {
             return;
         };
 
         let min_i = min_width_of(&self.windows[idx].window);
         let min_neighbor = min_width_of(&self.windows[neighbor].window);
 
-        let new_width = (self.windows[idx].width + delta).max(min_i);
+        let new_width = new_width.max(min_i);
         let adjusted = new_width - self.windows[idx].width;
         self.windows[idx].width = new_width;
         self.windows[neighbor].width = (self.windows[neighbor].width - adjusted).max(min_neighbor);
