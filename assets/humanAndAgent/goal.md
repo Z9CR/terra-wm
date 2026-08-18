@@ -32,7 +32,6 @@
    the layer will be stacked overlay to show all the windows(whether tiled or stacked) in the physical monitor(s).
    a layer should have following properties(user editable(public interface)), actually you can add other porps for inner-system use(private interface)):
       - `window_layout_type`: `tiling` or `stacked`(in simple, hyprland style or labwc style)
-      - `VFX_handler`: a given program to handle Original Video Frame and return VFXed Frame *(frame handling: terra-wm generate original frame -> given program add VFX on -> return frame to terra-wm -> render to physical monitor(s))*
       - `theme`: theme of current layer(just its literal meaning)
 
 ## detail

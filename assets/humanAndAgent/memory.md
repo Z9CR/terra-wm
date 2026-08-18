@@ -77,7 +77,12 @@ verified on host (tty2, 2026/8/17): bare run errors out (expected, winit needs a
 ## architecture decisions (2026/8/18, from goal.md update)
 - `layer` (proper noun): an INFINITE 2D plane, internally one `Space<Window>`; monitors are just
   VIEWPORTS into the layer (global layer, shown on all monitors)
-- layer properties (user-editable): `window_layout_type` (tiling|stacked), `VFX_handler`, `theme`
+- layer properties (user-editable): `window_layout_type` (tiling|stacked), `theme` ONLY
+  (VFX_handler DELETED 2026/8/18: effects are user-level business, not a layer property)
+- future option: a "Renderer layer" type (user program post-processes the accumulated frame
+  between normal layers, like GIMP adjustment layers) -- fits Unix philosophy (blur/tint = one
+  program each, chain by stacking); route = option 1 external process + shm fd (0.7.0 no ExportDma);
+  frosted glass falls out naturally (blur wallpaper layer -> frosted backdrop)
 - multi-layer model: `Vec<Layer>` rendered bottom-up; "switch two layers" = swap two Vec elements
 - feat 1 (stacking) marked DONE [2026/8/17]: basic click-to-raise stacking; more features added gradually
 - feat 5/6 renamed: infinity-screen -> infinity-layer (layer is infinite; translation moves viewport/layer)
@@ -85,5 +90,3 @@ verified on host (tty2, 2026/8/17): bare run errors out (expected, winit needs a
   then layer abstraction (feats 3/4/5/6); pan input = touchpad gestures AND keyboard shortcuts
 - tiling: grid-layout; each tiled window max size = smallest monitor size (layer infinite + viewable on
   any monitor -> tiles must fit smallest viewport)
-- VFX_handler interface: PENDING discussion (option 1: external process + shm/dmabuf frame passing,
-  option 3: wayland-client style frame round-trip)
