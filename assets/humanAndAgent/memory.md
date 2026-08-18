@@ -90,3 +90,9 @@ verified on host (tty2, 2026/8/17): bare run errors out (expected, winit needs a
   then layer abstraction (feats 3/4/5/6); pan input = touchpad gestures AND keyboard shortcuts
 - tiling: grid-layout; each tiled window max size = smallest monitor size (layer infinite + viewable on
   any monitor -> tiles must fit smallest viewport)
+- feat 2 (tiling) first version DONE (2026/8/18, commit 94a6561): horizontal row, insert beside focus +
+  full relayout, drag-resize adjusts width share with neighbor compensation; move/raise ignored;
+  old stacking grabs (move/resize) removed but kept in git history (commit 5718671) for stacked layers
+- layout_type: the `window_layout_type` per-layer variable (tiling|stacked) is DECIDED to land WITH the
+  Layer struct in feat 3, NOT as a global switch now (avoid rework); tiling.rs is written as a
+  dispatchable layout strategy so a stacked branch just joins it in feat 3
