@@ -24,13 +24,16 @@ pub fn render_frame(
 
     {
         let (renderer, mut framebuffer) = backend.bind().unwrap();
+        // Spaces are drawn in reverse order, so pass the layer stack reversed:
+        // layer_stack[0] (bottom) is drawn first, the top layer last.
+        let spaces = state.layer_stack.iter().rev().map(|layer| &layer.space);
         render_output::<_, WaylandSurfaceRenderElement<GlesRenderer>, _, _>(
             &state.output,
             renderer,
             &mut framebuffer,
             1.0,
             0,
-            [&state.space],
+            spaces,
             &[],
             damage_tracker,
             [0.1, 0.1, 0.1, 1.0],
@@ -38,14 +41,16 @@ pub fn render_frame(
         .unwrap();
     }
 
-    state.space.elements().for_each(|window| {
-        window.send_frame(
-            &state.output,
-            state.start_time.elapsed(),
-            Some(Duration::ZERO),
-            |_, _| Some(state.output.clone()),
-        )
-    });
+    for layer in &state.layer_stack {
+        layer.space.elements().for_each(|window| {
+            window.send_frame(
+                &state.output,
+                state.start_time.elapsed(),
+                Some(Duration::ZERO),
+                |_, _| Some(state.output.clone()),
+            )
+        });
+    }
 
     let map = layer_map_for_output(&state.output);
     for layer_surface in map.layers() {
@@ -57,8 +62,9 @@ pub fn render_frame(
         );
     }
 
-    state.space.refresh();
-    state.tiling.cleanup(&mut state.space, &state.output);
+    for layer in &mut state.layer_stack {
+        layer.cleanup(&state.output);
+    }
     state.popups.cleanup();
     let _ = state.display_handle.flush_clients();
 

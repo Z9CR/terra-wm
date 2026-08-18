@@ -14,7 +14,7 @@ use smithay::{
             protocol::{wl_seat, wl_surface::WlSurface},
         },
     },
-    utils::Serial,
+    utils::{Rectangle, Serial},
     wayland::{
         compositor::with_states,
         shell::xdg::{
@@ -24,7 +24,11 @@ use smithay::{
     },
 };
 
-use crate::{grabs::TilingResizeGrab, state::TerraWm};
+use crate::{
+    grabs::{MoveSurfaceGrab, ResizeSurfaceGrab, TilingResizeGrab},
+    layer::LayoutType,
+    state::TerraWm,
+};
 
 impl XdgShellHandler for TerraWm {
     fn xdg_shell_state(&mut self) -> &mut XdgShellState {
@@ -34,7 +38,8 @@ impl XdgShellHandler for TerraWm {
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         tracing::info!("new toplevel");
         let window = Window::new_wayland_window(surface);
-        self.tiling.add(&mut self.space, &self.output, window);
+        let output = self.output.clone();
+        self.active_layer_mut().add_window(&output, window);
     }
 
     fn new_popup(&mut self, surface: PopupSurface, _positioner: PositionerState) {
@@ -57,9 +62,43 @@ impl XdgShellHandler for TerraWm {
         surface.send_repositioned(token);
     }
 
-    fn move_request(&mut self, _surface: ToplevelSurface, _seat: wl_seat::WlSeat, _serial: Serial) {
-        // tiling owns placement; free move is a stacked-layer behavior (feature 3)
-        tracing::debug!("move request ignored in tiling mode");
+    fn move_request(&mut self, surface: ToplevelSurface, seat: wl_seat::WlSeat, serial: Serial) {
+        let seat = Seat::from_resource(&seat).unwrap();
+
+        let wl_surface = surface.wl_surface();
+
+        let Some(layer_idx) = self.layer_of_surface(wl_surface) else {
+            return;
+        };
+
+        if self.layer_stack[layer_idx].layout_type == LayoutType::Tiling {
+            tracing::debug!("move request ignored in tiling layer");
+            return;
+        }
+
+        if let Some(start_data) = check_grab(&seat, wl_surface, serial) {
+            let pointer = seat.get_pointer().unwrap();
+
+            let window = self.layer_stack[layer_idx]
+                .space
+                .elements()
+                .find(|w| w.toplevel().unwrap().wl_surface() == wl_surface)
+                .unwrap()
+                .clone();
+            let initial_window_location = self.layer_stack[layer_idx]
+                .space
+                .element_location(&window)
+                .unwrap();
+
+            let grab = MoveSurfaceGrab {
+                start_data,
+                window,
+                initial_window_location,
+                layer_idx,
+            };
+
+            pointer.set_grab(self, grab, serial, Focus::Clear);
+        }
     }
 
     fn resize_request(
@@ -67,23 +106,54 @@ impl XdgShellHandler for TerraWm {
         surface: ToplevelSurface,
         seat: wl_seat::WlSeat,
         serial: Serial,
-        _edges: xdg_toplevel::ResizeEdge,
+        edges: xdg_toplevel::ResizeEdge,
     ) {
         let seat = Seat::from_resource(&seat).unwrap();
 
         let wl_surface = surface.wl_surface();
 
+        let Some(layer_idx) = self.layer_of_surface(wl_surface) else {
+            return;
+        };
+
         if let Some(start_data) = check_grab(&seat, wl_surface, serial) {
             let pointer = seat.get_pointer().unwrap();
 
-            let window = self
+            let window = self.layer_stack[layer_idx]
                 .space
                 .elements()
                 .find(|w| w.toplevel().unwrap().wl_surface() == wl_surface)
                 .unwrap()
                 .clone();
 
-            let grab = TilingResizeGrab { start_data, window };
+            if self.layer_stack[layer_idx].layout_type == LayoutType::Tiling {
+                let grab = TilingResizeGrab {
+                    start_data,
+                    window,
+                    layer_idx,
+                };
+                pointer.set_grab(self, grab, serial, Focus::Clear);
+                return;
+            }
+
+            let initial_window_location = self.layer_stack[layer_idx]
+                .space
+                .element_location(&window)
+                .unwrap();
+            let initial_window_size = window.geometry().size;
+
+            surface.with_pending_state(|state| {
+                state.states.set(xdg_toplevel::State::Resizing);
+            });
+
+            surface.send_pending_configure();
+
+            let grab = ResizeSurfaceGrab::start(
+                start_data,
+                window,
+                edges.into(),
+                Rectangle::new(initial_window_location, initial_window_size),
+            );
 
             pointer.set_grab(self, grab, serial, Focus::Clear);
         }
@@ -152,17 +222,19 @@ impl TerraWm {
         let Ok(root) = find_popup_root_surface(&PopupKind::Xdg(popup.clone())) else {
             return;
         };
-        let Some(window) = self
-            .space
-            .elements()
-            .find(|w| w.toplevel().unwrap().wl_surface() == &root)
-        else {
+        let Some(layer_idx) = self.layer_of_surface(&root) else {
             return;
         };
+        let space = &self.layer_stack[layer_idx].space;
 
-        let output = self.space.outputs().next().unwrap();
-        let output_geo = self.space.output_geometry(output).unwrap();
-        let window_geo = self.space.element_geometry(window).unwrap();
+        let window = space
+            .elements()
+            .find(|w| w.toplevel().unwrap().wl_surface() == &root)
+            .unwrap();
+
+        let output = space.outputs().next().unwrap();
+        let output_geo = space.output_geometry(output).unwrap();
+        let window_geo = space.element_geometry(window).unwrap();
 
         let mut target = output_geo;
         target.loc -= get_popup_toplevel_coords(&PopupKind::Xdg(popup.clone()));

@@ -31,9 +31,9 @@ impl TerraWm {
             }
             InputEvent::PointerMotion { .. } => {}
             InputEvent::PointerMotionAbsolute { event, .. } => {
-                let output = self.space.outputs().next().unwrap();
+                let output = self.layer_stack[0].space.outputs().next().unwrap();
 
-                let output_geo = self.space.output_geometry(output).unwrap();
+                let output_geo = self.layer_stack[0].space.output_geometry(output).unwrap();
 
                 let pos = event.position_transformed(output_geo.size) + output_geo.loc.to_f64();
 
@@ -65,27 +65,38 @@ impl TerraWm {
                 let button_state = event.state();
 
                 if ButtonState::Pressed == button_state && !pointer.is_grabbed() {
-                    if let Some((window, _loc)) = self
-                        .space
-                        .element_under(pointer.current_location())
-                        .map(|(w, l)| (w.clone(), l))
-                    {
-                        self.tiling
-                            .set_focus(&mut self.space, &self.output, &window);
-                        keyboard.set_focus(
-                            self,
-                            Some(window.toplevel().unwrap().wl_surface().clone()),
-                            serial,
-                        );
-                        self.space.elements().for_each(|window| {
-                            window.toplevel().unwrap().send_pending_configure();
-                        });
+                    let pos = pointer.current_location();
+                    let hit =
+                        self.layer_stack
+                            .iter()
+                            .rev()
+                            .enumerate()
+                            .find_map(|(rev_idx, layer)| {
+                                layer.element_under(pos).map(|(window, _)| {
+                                    (self.layer_stack.len() - 1 - rev_idx, window.clone())
+                                })
+                            });
+
+                    if let Some((layer_idx, window)) = hit {
+                        self.active_layer = layer_idx;
+                        let wl_surface = {
+                            let layer = &mut self.layer_stack[layer_idx];
+                            layer.focus_window(&self.output, &window);
+                            window.toplevel().unwrap().wl_surface().clone()
+                        };
+                        keyboard.set_focus(self, Some(wl_surface), serial);
+                        for layer in &mut self.layer_stack {
+                            layer.space.elements().for_each(|w| {
+                                w.toplevel().unwrap().send_pending_configure();
+                            });
+                        }
                     } else {
-                        self.tiling.clear_focus(&mut self.space, &self.output);
-                        self.space.elements().for_each(|window| {
-                            window.set_activated(false);
-                            window.toplevel().unwrap().send_pending_configure();
-                        });
+                        for layer in &mut self.layer_stack {
+                            layer.clear_focus(&self.output);
+                            layer.space.elements().for_each(|w| {
+                                w.toplevel().unwrap().send_pending_configure();
+                            });
+                        }
                         keyboard.set_focus(self, Option::<WlSurface>::None, serial);
                     }
                 };

@@ -12,13 +12,14 @@ use smithay::{
 
 use crate::state::TerraWm;
 
-pub struct TilingResizeGrab {
+pub struct MoveSurfaceGrab {
     pub start_data: PointerGrabStartData<TerraWm>,
     pub window: Window,
+    pub initial_window_location: Point<i32, Logical>,
     pub layer_idx: usize,
 }
 
-impl PointerGrab<TerraWm> for TilingResizeGrab {
+impl PointerGrab<TerraWm> for MoveSurfaceGrab {
     fn motion(
         &mut self,
         data: &mut TerraWm,
@@ -28,8 +29,13 @@ impl PointerGrab<TerraWm> for TilingResizeGrab {
     ) {
         handle.motion(data, None, event);
 
-        let delta = (event.location.x - self.start_data.location.x) as i32;
-        data.layer_stack[self.layer_idx].resize_delta(&data.output, &self.window, delta);
+        let delta = event.location - self.start_data.location;
+        let new_location = self.initial_window_location.to_f64() + delta;
+        data.layer_stack[self.layer_idx].space.map_element(
+            self.window.clone(),
+            new_location.to_i32_round(),
+            true,
+        );
     }
 
     fn relative_motion(

@@ -26,14 +26,19 @@ impl WlrLayerShellHandler for TerraWm {
         let output = wl_output
             .as_ref()
             .and_then(Output::from_resource)
-            .unwrap_or_else(|| self.space.outputs().next().unwrap().clone());
+            .unwrap_or_else(|| self.layer_stack[0].space.outputs().next().unwrap().clone());
         let mut map = layer_map_for_output(&output);
         map.map_layer(&LayerSurface::new(surface, namespace))
             .unwrap();
     }
 
     fn layer_destroyed(&mut self, surface: WlrLayerSurface) {
-        for output in self.space.outputs().cloned().collect::<Vec<_>>() {
+        for output in self.layer_stack[0]
+            .space
+            .outputs()
+            .cloned()
+            .collect::<Vec<_>>()
+        {
             let mut map = layer_map_for_output(&output);
             let layer = map
                 .layers()

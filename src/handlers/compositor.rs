@@ -16,7 +16,11 @@ use smithay::{
     },
 };
 
-use crate::state::{ClientState, TerraWm};
+use crate::{
+    grabs::resize_grab,
+    layer::{Layer, LayoutType},
+    state::{ClientState, TerraWm},
+};
 
 use super::xdg_shell;
 
@@ -36,21 +40,33 @@ impl CompositorHandler for TerraWm {
             while let Some(parent) = get_parent(&root) {
                 root = parent;
             }
-            if let Some(window) = self
-                .space
-                .elements()
-                .find(|w| w.toplevel().unwrap().wl_surface() == &root)
-            {
-                window.on_commit();
+            for layer in &mut self.layer_stack {
+                if let Some(window) = layer
+                    .space
+                    .elements()
+                    .find(|w| w.toplevel().unwrap().wl_surface() == &root)
+                {
+                    window.on_commit();
+                    break;
+                }
             }
         };
 
-        xdg_shell::handle_commit(&mut self.popups, &self.space, surface);
-        handle_layer_commit(&mut self.space, surface);
+        xdg_shell::handle_commit(&mut self.popups, &self.layer_stack[0].space, surface);
+        handle_resize_commit(&mut self.layer_stack, surface);
+        handle_layer_commit(&mut self.layer_stack[0].space, surface);
     }
 }
 
-fn handle_layer_commit(space: &mut Space<Window>, surface: &WlSurface) {
+fn handle_resize_commit(layer_stack: &mut [Layer], surface: &WlSurface) {
+    for layer in layer_stack {
+        if layer.layout_type == LayoutType::Stacked {
+            resize_grab::handle_commit(&mut layer.space, surface);
+        }
+    }
+}
+
+fn handle_layer_commit(space: &Space<Window>, surface: &WlSurface) {
     if let Some(output) = space.outputs().find(|o| {
         layer_map_for_output(o)
             .layer_for_surface(surface, WindowSurfaceType::TOPLEVEL)

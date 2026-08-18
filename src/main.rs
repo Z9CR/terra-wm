@@ -1,6 +1,7 @@
 mod grabs;
 mod handlers;
 mod input;
+mod layer;
 mod render;
 mod state;
 mod tiling;
