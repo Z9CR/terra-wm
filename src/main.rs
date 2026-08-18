@@ -3,6 +3,7 @@ mod handlers;
 mod input;
 mod render;
 mod state;
+mod tiling;
 mod winit;
 
 use smithay::reexports::{calloop::EventLoop, wayland_server::Display};

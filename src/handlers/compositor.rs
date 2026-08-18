@@ -16,10 +16,7 @@ use smithay::{
     },
 };
 
-use crate::{
-    grabs::resize_grab,
-    state::{ClientState, TerraWm},
-};
+use crate::state::{ClientState, TerraWm};
 
 use super::xdg_shell;
 
@@ -49,7 +46,6 @@ impl CompositorHandler for TerraWm {
         };
 
         xdg_shell::handle_commit(&mut self.popups, &self.space, surface);
-        resize_grab::handle_commit(&mut self.space, surface);
         handle_layer_commit(&mut self.space, surface);
     }
 }

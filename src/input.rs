@@ -70,7 +70,8 @@ impl TerraWm {
                         .element_under(pointer.current_location())
                         .map(|(w, l)| (w.clone(), l))
                     {
-                        self.space.raise_element(&window, true);
+                        self.tiling
+                            .set_focus(&mut self.space, &self.output, &window);
                         keyboard.set_focus(
                             self,
                             Some(window.toplevel().unwrap().wl_surface().clone()),
@@ -80,6 +81,7 @@ impl TerraWm {
                             window.toplevel().unwrap().send_pending_configure();
                         });
                     } else {
+                        self.tiling.clear_focus(&mut self.space, &self.output);
                         self.space.elements().for_each(|window| {
                             window.set_activated(false);
                             window.toplevel().unwrap().send_pending_configure();

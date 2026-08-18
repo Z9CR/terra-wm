@@ -14,7 +14,7 @@ use smithay::{
             protocol::{wl_seat, wl_surface::WlSurface},
         },
     },
-    utils::{Rectangle, Serial},
+    utils::Serial,
     wayland::{
         compositor::with_states,
         shell::xdg::{
@@ -24,10 +24,7 @@ use smithay::{
     },
 };
 
-use crate::{
-    grabs::{MoveSurfaceGrab, ResizeSurfaceGrab},
-    state::TerraWm,
-};
+use crate::{grabs::TilingResizeGrab, state::TerraWm};
 
 impl XdgShellHandler for TerraWm {
     fn xdg_shell_state(&mut self) -> &mut XdgShellState {
@@ -37,7 +34,7 @@ impl XdgShellHandler for TerraWm {
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         tracing::info!("new toplevel");
         let window = Window::new_wayland_window(surface);
-        self.space.map_element(window, (0, 0), false);
+        self.tiling.add(&mut self.space, &self.output, window);
     }
 
     fn new_popup(&mut self, surface: PopupSurface, _positioner: PositionerState) {
@@ -60,30 +57,9 @@ impl XdgShellHandler for TerraWm {
         surface.send_repositioned(token);
     }
 
-    fn move_request(&mut self, surface: ToplevelSurface, seat: wl_seat::WlSeat, serial: Serial) {
-        let seat = Seat::from_resource(&seat).unwrap();
-
-        let wl_surface = surface.wl_surface();
-
-        if let Some(start_data) = check_grab(&seat, wl_surface, serial) {
-            let pointer = seat.get_pointer().unwrap();
-
-            let window = self
-                .space
-                .elements()
-                .find(|w| w.toplevel().unwrap().wl_surface() == wl_surface)
-                .unwrap()
-                .clone();
-            let initial_window_location = self.space.element_location(&window).unwrap();
-
-            let grab = MoveSurfaceGrab {
-                start_data,
-                window,
-                initial_window_location,
-            };
-
-            pointer.set_grab(self, grab, serial, Focus::Clear);
-        }
+    fn move_request(&mut self, _surface: ToplevelSurface, _seat: wl_seat::WlSeat, _serial: Serial) {
+        // tiling owns placement; free move is a stacked-layer behavior (feature 3)
+        tracing::debug!("move request ignored in tiling mode");
     }
 
     fn resize_request(
@@ -91,7 +67,7 @@ impl XdgShellHandler for TerraWm {
         surface: ToplevelSurface,
         seat: wl_seat::WlSeat,
         serial: Serial,
-        edges: xdg_toplevel::ResizeEdge,
+        _edges: xdg_toplevel::ResizeEdge,
     ) {
         let seat = Seat::from_resource(&seat).unwrap();
 
@@ -106,21 +82,8 @@ impl XdgShellHandler for TerraWm {
                 .find(|w| w.toplevel().unwrap().wl_surface() == wl_surface)
                 .unwrap()
                 .clone();
-            let initial_window_location = self.space.element_location(&window).unwrap();
-            let initial_window_size = window.geometry().size;
 
-            surface.with_pending_state(|state| {
-                state.states.set(xdg_toplevel::State::Resizing);
-            });
-
-            surface.send_pending_configure();
-
-            let grab = ResizeSurfaceGrab::start(
-                start_data,
-                window,
-                edges.into(),
-                Rectangle::new(initial_window_location, initial_window_size),
-            );
+            let grab = TilingResizeGrab { start_data, window };
 
             pointer.set_grab(self, grab, serial, Focus::Clear);
         }

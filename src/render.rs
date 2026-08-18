@@ -58,6 +58,7 @@ pub fn render_frame(
     }
 
     state.space.refresh();
+    state.tiling.cleanup(&mut state.space, &state.output);
     state.popups.cleanup();
     let _ = state.display_handle.flush_clients();
 

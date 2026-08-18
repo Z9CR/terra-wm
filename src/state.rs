@@ -23,6 +23,8 @@ use smithay::{
     },
 };
 
+use crate::tiling::TilingLayout;
+
 pub struct TerraWm {
     pub start_time: std::time::Instant,
     pub socket_name: OsString,
@@ -30,8 +32,13 @@ pub struct TerraWm {
     pub loop_signal: LoopSignal,
 
     pub space: Space<Window>,
+    /// The layer-coordinate position the monitor viewport is looking at.
+    /// Infinity-layer foundation: tiled windows live at fixed layer
+    /// coordinates; translating the viewport moves the view, not the windows.
+    pub view_offset: Point<i32, Logical>,
     pub output: Output,
     pub popups: PopupManager,
+    pub tiling: TilingLayout,
 
     pub compositor_state: CompositorState,
     pub xdg_shell_state: XdgShellState,
@@ -84,8 +91,10 @@ impl TerraWm {
             display_handle: dh,
             loop_signal,
             space,
+            view_offset: Point::from((0, 0)),
             output,
             popups,
+            tiling: TilingLayout::default(),
             compositor_state,
             xdg_shell_state,
             layer_shell_state,
