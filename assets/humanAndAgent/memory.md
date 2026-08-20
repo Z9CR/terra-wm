@@ -105,3 +105,14 @@ verified on host (tty2, 2026/8/17): bare run errors out (expected, winit needs a
 - layer properties now: theme + focused (bool; implemented as active_layer index, one focused layer)
 - new proper noun `vscreen`: layer divided into rectangles of smallest-monitor size; window
   belongs to vscreen of its center point (border tie-break: right-top); infinity-layer groundwork
+
+## maximize/minimize (2026/8/18, commit cbdcc89)
+- vscreen implemented (src/vscreen.rs): layer grid of smallest-monitor cells;
+  window center -> vscreen (goal.md border tie-break right-top: vertical border
+  floor lands right, horizontal border y-1)
+- maximize: move window into its vscreen rect + Maximized state + size;
+  unmaximize: clear state+size (client restores own size, position stays)
+- minimize: unmap_elem from space (auto skips render/hit-test/frame callbacks),
+  saved position in Layer.minimized; unminimize API exists, restore trigger
+  (command/taskbar/gesture) comes with command system
+- fullscreen_request: NEXT commit (trait default still active)
