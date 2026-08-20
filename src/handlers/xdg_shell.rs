@@ -14,7 +14,7 @@ use smithay::{
             protocol::{wl_seat, wl_surface::WlSurface},
         },
     },
-    utils::{Rectangle, Serial},
+    utils::{Point, Rectangle, SERIAL_COUNTER, Serial},
     wayland::{
         compositor::with_states,
         shell::xdg::{
@@ -27,6 +27,7 @@ use smithay::{
 use crate::{
     grabs::{MoveSurfaceGrab, ResizeSurfaceGrab},
     state::TerraWm,
+    vscreen,
 };
 
 impl XdgShellHandler for TerraWm {
@@ -140,6 +141,77 @@ impl XdgShellHandler for TerraWm {
 
             pointer.set_grab(self, grab, serial, Focus::Clear);
         }
+    }
+
+    fn maximize_request(&mut self, surface: ToplevelSurface) {
+        let Some(layer_idx) = self.layer_of_surface(surface.wl_surface()) else {
+            return;
+        };
+        let Some(window) = self.layer_stack[layer_idx]
+            .space
+            .elements()
+            .find(|w| w.toplevel().unwrap().wl_surface() == surface.wl_surface())
+            .cloned()
+        else {
+            return;
+        };
+
+        let Some(location) = self.layer_stack[layer_idx].space.element_location(&window) else {
+            return;
+        };
+        let geometry = window.geometry();
+        let center = Point::from((
+            location.x + geometry.size.w / 2,
+            location.y + geometry.size.h / 2,
+        ));
+
+        let Some(cell) =
+            vscreen::smallest_monitor_size(self.layer_stack[layer_idx].space.outputs())
+        else {
+            return;
+        };
+        let index = vscreen::vscreen_of(center, cell);
+        let rect = vscreen::vscreen_rect(index, cell);
+
+        let layer = &mut self.layer_stack[layer_idx];
+        layer.space.map_element(window.clone(), rect.loc, true);
+        layer.focus_window(&window);
+
+        surface.with_pending_state(|state| {
+            state.states.set(xdg_toplevel::State::Maximized);
+            state.size = Some(rect.size);
+        });
+        surface.send_configure();
+    }
+
+    fn unmaximize_request(&mut self, surface: ToplevelSurface) {
+        surface.with_pending_state(|state| {
+            state.states.unset(xdg_toplevel::State::Maximized);
+            state.size = None;
+        });
+        surface.send_configure();
+    }
+
+    fn minimize_request(&mut self, surface: ToplevelSurface) {
+        let Some(layer_idx) = self.layer_of_surface(surface.wl_surface()) else {
+            return;
+        };
+        let Some(window) = self.layer_stack[layer_idx]
+            .space
+            .elements()
+            .find(|w| w.toplevel().unwrap().wl_surface() == surface.wl_surface())
+            .cloned()
+        else {
+            return;
+        };
+
+        self.layer_stack[layer_idx].minimize(&window);
+
+        self.seat.get_keyboard().unwrap().set_focus(
+            self,
+            Option::<WlSurface>::None,
+            SERIAL_COUNTER.next_serial(),
+        );
     }
 
     fn grab(&mut self, _surface: PopupSurface, _seat: wl_seat::WlSeat, _serial: Serial) {}

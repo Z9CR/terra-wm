@@ -4,6 +4,7 @@ mod input;
 mod layer;
 mod render;
 mod state;
+mod vscreen;
 mod winit;
 
 use smithay::reexports::{calloop::EventLoop, wayland_server::Display};

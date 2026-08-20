@@ -10,20 +10,25 @@
 //! Rendering passes the spaces in reverse order so the bottom layer is
 //! drawn first (see `render.rs`).
 
+use std::collections::HashMap;
+
 use smithay::{
     desktop::{Space, Window, WindowSurfaceType},
     reexports::wayland_server::protocol::wl_surface::WlSurface,
-    utils::{Logical, Point},
+    utils::{IsAlive, Logical, Point},
 };
 
 pub struct Layer {
     pub space: Space<Window>,
+    /// Minimized windows and their saved position, so they can be restored.
+    minimized: HashMap<Window, Point<i32, Logical>>,
 }
 
 impl Default for Layer {
     fn default() -> Self {
         Self {
             space: Space::default(),
+            minimized: HashMap::new(),
         }
     }
 }
@@ -48,6 +53,33 @@ impl Layer {
 
     pub fn cleanup(&mut self) {
         self.space.refresh();
+        self.minimized.retain(|window, _| window.alive());
+    }
+
+    pub fn minimize(&mut self, window: &Window) {
+        if self.minimized.contains_key(window) {
+            return;
+        }
+        let Some(location) = self.space.element_location(window) else {
+            return;
+        };
+        self.space.unmap_elem(window);
+        self.minimized.insert(window.clone(), location);
+    }
+
+    /// Restore a minimized window; used by the future command system.
+    #[allow(dead_code)]
+    pub fn unminimize(&mut self, window: &Window) {
+        let Some(location) = self.minimized.remove(window) else {
+            return;
+        };
+        self.space.map_element(window.clone(), location, false);
+    }
+
+    /// Whether a window is minimized; used by the future command system.
+    #[allow(dead_code)]
+    pub fn is_minimized(&self, window: &Window) -> bool {
+        self.minimized.contains_key(window)
     }
 
     pub fn element_under(
