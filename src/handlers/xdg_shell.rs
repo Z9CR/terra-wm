@@ -25,8 +25,7 @@ use smithay::{
 };
 
 use crate::{
-    grabs::{MoveSurfaceGrab, ResizeSurfaceGrab, TilingResizeGrab},
-    layer::LayoutType,
+    grabs::{MoveSurfaceGrab, ResizeSurfaceGrab},
     state::TerraWm,
 };
 
@@ -38,8 +37,7 @@ impl XdgShellHandler for TerraWm {
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         tracing::info!("new toplevel");
         let window = Window::new_wayland_window(surface);
-        let output = self.output.clone();
-        self.active_layer_mut().add_window(&output, window);
+        self.active_layer_mut().add_window(window);
     }
 
     fn new_popup(&mut self, surface: PopupSurface, _positioner: PositionerState) {
@@ -70,11 +68,6 @@ impl XdgShellHandler for TerraWm {
         let Some(layer_idx) = self.layer_of_surface(wl_surface) else {
             return;
         };
-
-        if self.layer_stack[layer_idx].layout_type == LayoutType::Tiling {
-            tracing::debug!("move request ignored in tiling layer");
-            return;
-        }
 
         if let Some(start_data) = check_grab(&seat, wl_surface, serial) {
             let pointer = seat.get_pointer().unwrap();
@@ -125,29 +118,6 @@ impl XdgShellHandler for TerraWm {
                 .find(|w| w.toplevel().unwrap().wl_surface() == wl_surface)
                 .unwrap()
                 .clone();
-
-            if self.layer_stack[layer_idx].layout_type == LayoutType::Tiling {
-                let initial_width = self.layer_stack[layer_idx]
-                    .tiling
-                    .width_of(&window)
-                    .unwrap_or(0);
-                let left_edge = matches!(
-                    edges,
-                    xdg_toplevel::ResizeEdge::Left
-                        | xdg_toplevel::ResizeEdge::TopLeft
-                        | xdg_toplevel::ResizeEdge::BottomLeft
-                );
-
-                let grab = TilingResizeGrab {
-                    start_data,
-                    window,
-                    layer_idx,
-                    initial_width,
-                    left_edge,
-                };
-                pointer.set_grab(self, grab, serial, Focus::Clear);
-                return;
-            }
 
             let initial_window_location = self.layer_stack[layer_idx]
                 .space

@@ -91,7 +91,7 @@ impl TerraWm {
             socket_name,
             display_handle: dh,
             loop_signal,
-            layer_stack: vec![Layer::new_tiling()],
+            layer_stack: vec![Layer::default()],
             active_layer: 0,
             view_offset: Point::from((0, 0)),
             output,

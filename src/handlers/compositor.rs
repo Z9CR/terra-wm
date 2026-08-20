@@ -18,7 +18,6 @@ use smithay::{
 
 use crate::{
     grabs::resize_grab,
-    layer::{Layer, LayoutType},
     state::{ClientState, TerraWm},
 };
 
@@ -53,16 +52,10 @@ impl CompositorHandler for TerraWm {
         };
 
         xdg_shell::handle_commit(&mut self.popups, &self.layer_stack[0].space, surface);
-        handle_resize_commit(&mut self.layer_stack, surface);
-        handle_layer_commit(&mut self.layer_stack[0].space, surface);
-    }
-}
-
-fn handle_resize_commit(layer_stack: &mut [Layer], surface: &WlSurface) {
-    for layer in layer_stack {
-        if layer.layout_type == LayoutType::Stacked {
+        for layer in &mut self.layer_stack {
             resize_grab::handle_commit(&mut layer.space, surface);
         }
+        handle_layer_commit(&mut self.layer_stack[0].space, surface);
     }
 }
 

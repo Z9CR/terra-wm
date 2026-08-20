@@ -63,7 +63,7 @@ pub fn render_frame(
     }
 
     for layer in &mut state.layer_stack {
-        layer.cleanup(&state.output);
+        layer.cleanup();
     }
     state.popups.cleanup();
     let _ = state.display_handle.flush_clients();

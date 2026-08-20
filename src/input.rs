@@ -81,7 +81,7 @@ impl TerraWm {
                         self.active_layer = layer_idx;
                         let wl_surface = {
                             let layer = &mut self.layer_stack[layer_idx];
-                            layer.focus_window(&self.output, &window);
+                            layer.focus_window(&window);
                             window.toplevel().unwrap().wl_surface().clone()
                         };
                         keyboard.set_focus(self, Some(wl_surface), serial);
@@ -92,7 +92,7 @@ impl TerraWm {
                         }
                     } else {
                         for layer in &mut self.layer_stack {
-                            layer.clear_focus(&self.output);
+                            layer.clear_focus();
                             layer.space.elements().for_each(|w| {
                                 w.toplevel().unwrap().send_pending_configure();
                             });
