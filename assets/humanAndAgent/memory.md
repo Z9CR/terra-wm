@@ -96,3 +96,12 @@ verified on host (tty2, 2026/8/17): bare run errors out (expected, winit needs a
 - layout_type: the `window_layout_type` per-layer variable (tiling|stacked) is DECIDED to land WITH the
   Layer struct in feat 3, NOT as a global switch now (avoid rework); tiling.rs is written as a
   dispatchable layout strategy so a stacked branch just joins it in feat 3
+
+## direction change (2026/8/18): pure stacking, no tiling
+- goal.md updated by user: Dynamic-Tiling REMOVED from feature list; features renumbered
+  (2=multi-layers overlay, 3=switch two layers, 4=infinity-layer, 5=infinity translation)
+- tiling.rs + TilingResizeGrab + LayoutType deleted (commit 8af5a06); Layer = pure stacked
+  container (labwc-style cascade placement, raise-to-top); git history keeps tiling (94a6561, 869fbce)
+- layer properties now: theme + focused (bool; implemented as active_layer index, one focused layer)
+- new proper noun `vscreen`: layer divided into rectangles of smallest-monitor size; window
+  belongs to vscreen of its center point (border tie-break: right-top); infinity-layer groundwork
