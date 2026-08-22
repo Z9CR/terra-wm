@@ -9,6 +9,7 @@ use smithay::{
         winit::WinitGraphicsBackend,
     },
     desktop::{layer_map_for_output, space::render_output},
+    output::Output,
     utils::Rectangle,
 };
 
@@ -41,24 +42,33 @@ pub fn render_frame(
         .unwrap();
     }
 
+    let output = state.output.clone();
+    post_render(state, &output);
+
+    backend.submit(Some(&[damage])).unwrap();
+}
+
+/// Shared post-render work for both backends: frame callbacks, cleanup,
+/// client flush.
+pub fn post_render(state: &mut TerraWm, output: &Output) {
     for layer in &state.layer_stack {
         layer.space.elements().for_each(|window| {
             window.send_frame(
-                &state.output,
+                output,
                 state.start_time.elapsed(),
                 Some(Duration::ZERO),
-                |_, _| Some(state.output.clone()),
+                |_, _| Some(output.clone()),
             )
         });
     }
 
-    let map = layer_map_for_output(&state.output);
+    let map = layer_map_for_output(output);
     for layer_surface in map.layers() {
         layer_surface.send_frame(
-            &state.output,
+            output,
             state.start_time.elapsed(),
             Some(Duration::ZERO),
-            |_, _| Some(state.output.clone()),
+            |_, _| Some(output.clone()),
         );
     }
 
@@ -67,6 +77,4 @@ pub fn render_frame(
     }
     state.popups.cleanup();
     let _ = state.display_handle.flush_clients();
-
-    backend.submit(Some(&[damage])).unwrap();
 }
