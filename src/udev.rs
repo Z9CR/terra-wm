@@ -336,13 +336,20 @@ impl DrmData {
         if rendered {
             if let Err(err) = surface.drm_output.queue_frame(()) {
                 tracing::warn!(?err, "render: queue_frame failed");
+                post_render(state, &output);
                 self.schedule_render(drm_data, crtc, state, handle);
                 return;
             }
-            post_render(state, &output);
             tracing::info!(?crtc, "frame queued");
         } else {
-            // no damage this round: retry after one frame to re-test
+            tracing::debug!(?crtc, "frame empty, will retry");
+        }
+
+        // frame callbacks + client flush run on every render attempt,
+        // independent of damage: otherwise configures (and frame
+        // callbacks) stay stuck while the scene is unchanged.
+        post_render(state, &output);
+        if !rendered {
             self.schedule_render(drm_data, crtc, state, handle);
         }
     }
@@ -360,6 +367,7 @@ impl DrmData {
         if let Err(err) = surface.drm_output.frame_submitted() {
             tracing::warn!(?err, "frame_submitted failed");
         }
+        tracing::debug!(?crtc, "vblank, frame submitted");
         self.schedule_render(drm_data, crtc, state, handle);
     }
 
