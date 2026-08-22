@@ -130,6 +130,7 @@ impl DrmData {
 
         self.output_manager = Some(output_manager);
         self.renderer = Some(renderer);
+        tracing::info!(?node, "drm device initialized");
 
         self.device_changed(drm_data, node, state, handle);
         Ok(())
@@ -262,6 +263,7 @@ impl DrmData {
                 drm_output,
             },
         );
+        tracing::info!(?crtc, "drm output initialized");
 
         // kick off rendering
         let drm_rc = Rc::clone(drm_data);
@@ -296,20 +298,22 @@ impl DrmData {
         handle: &LoopHandle<TerraWm>,
     ) {
         let Some(surface) = self.surfaces.get_mut(&crtc) else {
+            tracing::warn!(?crtc, "render: no surface for crtc");
             return;
         };
         let Some(renderer) = &mut self.renderer else {
+            tracing::warn!("render: no renderer");
             return;
         };
 
         let output = surface.output.clone();
-        let scale = output.current_scale().fractional_scale();
 
         let spaces = state.layer_stack.iter().rev().map(|layer| &layer.space);
         let elements = match space_render_elements(renderer, spaces, &output, 1.0) {
             Ok(elements) => elements,
             Err(err) => {
-                tracing::warn!(?err, "no mode for output");
+                tracing::warn!(?err, "render: building elements failed");
+                self.schedule_render(drm_data, crtc, state, handle);
                 return;
             }
         };
@@ -322,21 +326,22 @@ impl DrmData {
         ) {
             Ok(result) => (!result.is_empty, result.states),
             Err(err) => {
-                tracing::warn!(?err, "error during rendering");
+                tracing::warn!(?err, "render: render_frame failed");
+                self.schedule_render(drm_data, crtc, state, handle);
                 return;
             }
         };
 
         if rendered {
             if let Err(err) = surface.drm_output.queue_frame(()) {
-                tracing::warn!(?err, "failed to queue frame");
+                tracing::warn!(?err, "render: queue_frame failed");
+                self.schedule_render(drm_data, crtc, state, handle);
                 return;
             }
             post_render(state, &output);
-        }
-
-        let _ = scale;
-        if !rendered {
+            tracing::debug!(?crtc, "frame queued");
+        } else {
+            // no damage this round: retry after one frame to re-test
             self.schedule_render(drm_data, crtc, state, handle);
         }
     }
@@ -367,13 +372,11 @@ impl DrmData {
         let Some(surface) = self.surfaces.get(&crtc) else {
             return;
         };
-        let Some(frame_duration) = surface
+        let frame_duration = surface
             .output
             .current_mode()
             .map(|mode| Duration::from_secs_f64(1_000f64 / mode.refresh as f64))
-        else {
-            return;
-        };
+            .unwrap_or(Duration::from_millis(16));
         let delay = Duration::from_secs_f64(frame_duration.as_secs_f64() * 0.6);
         let _ = delay;
 
