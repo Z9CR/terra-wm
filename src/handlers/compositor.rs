@@ -1,6 +1,5 @@
 use smithay::{
     backend::renderer::utils::on_commit_buffer_handler,
-    delegate_compositor, delegate_shm,
     desktop::{Space, Window, WindowSurfaceType, layer_map_for_output},
     reexports::wayland_server::{
         Client,
@@ -82,6 +81,3 @@ impl ShmHandler for TerraWm {
         &self.shm_state
     }
 }
-
-delegate_compositor!(TerraWm);
-delegate_shm!(TerraWm);

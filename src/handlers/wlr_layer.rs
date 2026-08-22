@@ -1,5 +1,4 @@
 use smithay::{
-    delegate_layer_shell,
     desktop::{LayerSurface, layer_map_for_output},
     output::Output,
     reexports::wayland_server::protocol::wl_output::WlOutput,
@@ -50,5 +49,3 @@ impl WlrLayerShellHandler for TerraWm {
         }
     }
 }
-
-delegate_layer_shell!(TerraWm);

@@ -2,21 +2,21 @@ mod compositor;
 mod wlr_layer;
 mod xdg_shell;
 
-use std::os::unix::io::OwnedFd;
-
 use smithay::{
-    delegate_data_device, delegate_output, delegate_pointer_constraints, delegate_seat,
-    input::{Seat, SeatHandler, SeatState, pointer::CursorImageStatus},
+    input::{
+        Seat, SeatHandler, SeatState,
+        dnd::{DnDGrab, DndGrabHandler, GrabType, Source},
+        pointer::{CursorImageStatus, Focus},
+    },
     reexports::wayland_server::{Resource, protocol::wl_surface::WlSurface},
-    utils::{Logical, Point},
+    utils::Serial,
     wayland::{
         output::OutputHandler,
         pointer_constraints::PointerConstraintsHandler,
         selection::{
             SelectionHandler,
             data_device::{
-                ClientDndGrabHandler, DataDeviceHandler, DataDeviceState, ServerDndGrabHandler,
-                set_data_device_focus,
+                DataDeviceHandler, DataDeviceState, WaylandDndGrabHandler, set_data_device_focus,
             },
         },
     },
@@ -42,42 +42,44 @@ impl SeatHandler for TerraWm {
     }
 }
 
-impl PointerConstraintsHandler for TerraWm {
-    fn new_constraint(
-        &mut self,
-        _surface: &WlSurface,
-        _pointer: &smithay::input::pointer::PointerHandle<Self>,
-    ) {
-    }
-
-    fn cursor_position_hint(
-        &mut self,
-        _surface: &WlSurface,
-        _pointer: &smithay::input::pointer::PointerHandle<Self>,
-        _location: Point<f64, Logical>,
-    ) {
-    }
-}
+impl PointerConstraintsHandler for TerraWm {}
 
 impl SelectionHandler for TerraWm {
     type SelectionUserData = ();
 }
 
 impl DataDeviceHandler for TerraWm {
-    fn data_device_state(&self) -> &DataDeviceState {
-        &self.data_device_state
+    fn data_device_state(&mut self) -> &mut DataDeviceState {
+        &mut self.data_device_state
     }
 }
 
-impl ClientDndGrabHandler for TerraWm {}
+impl DndGrabHandler for TerraWm {}
 
-impl ServerDndGrabHandler for TerraWm {
-    fn send(&mut self, _mime_type: String, _fd: OwnedFd, _seat: Seat<Self>) {}
+impl WaylandDndGrabHandler for TerraWm {
+    fn dnd_requested<S: Source>(
+        &mut self,
+        source: S,
+        _icon: Option<WlSurface>,
+        seat: Seat<Self>,
+        serial: Serial,
+        type_: GrabType,
+    ) {
+        match type_ {
+            GrabType::Pointer => {
+                let ptr = seat.get_pointer().unwrap();
+                let start_data = ptr.grab_start_data().unwrap();
+
+                let grab = DnDGrab::new_pointer(&self.display_handle, start_data, source, seat);
+                ptr.set_grab(self, grab, serial, Focus::Keep);
+            }
+            GrabType::Touch => {
+                source.cancel();
+            }
+        }
+    }
 }
 
 impl OutputHandler for TerraWm {}
 
-delegate_seat!(TerraWm);
-delegate_pointer_constraints!(TerraWm);
-delegate_data_device!(TerraWm);
-delegate_output!(TerraWm);
+smithay::delegate_dispatch2!(TerraWm);

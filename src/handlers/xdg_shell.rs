@@ -1,5 +1,4 @@
 use smithay::{
-    delegate_xdg_shell,
     desktop::{
         PopupKind, PopupManager, Space, Window, find_popup_root_surface, get_popup_toplevel_coords,
     },
@@ -300,5 +299,3 @@ impl TerraWm {
         });
     }
 }
-
-delegate_xdg_shell!(TerraWm);
