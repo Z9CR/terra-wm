@@ -4,3 +4,6 @@
 /.tmp
 /.runtime
 /.known_hosts
+
+# diagnostic logs
+*.log
