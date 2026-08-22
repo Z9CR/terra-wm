@@ -116,3 +116,14 @@ verified on host (tty2, 2026/8/17): bare run errors out (expected, winit needs a
   saved position in Layer.minimized; unminimize API exists, restore trigger
   (command/taskbar/gesture) comes with command system
 - fullscreen_request: NEXT commit (trait default still active)
+
+## DRM/udev backend (2026/8/22, works on bare tty)
+- commit chain: 6290ca9 (backend) -> c463e76 (robust loop) -> 1d5c5cd (flush fix) -> 8fb031d (Super+Q)
+- architecture: DrmData in Rc<RefCell> captured by event-loop closures (TerraWm stays backend-clean);
+  single GPU, first connector; vblank-driven render + 16ms poll on empty frames
+- KEY BUG FOUND: post_render (frame callbacks + flush_clients) must run EVERY render attempt,
+  not only when damage rendered - otherwise client configures sit unflushed while the scene
+  polls empty (konsole stuck at "no outputs"/test_client stuck at "waiting for configure")
+- Super+Q quits (shared keyboard filter, master filter gives ModifiersState+KeysymHandle)
+- user runs: RUST_LOG=info,terra_wm=debug ./target/debug/terra-wm --tty-udev -c konsole
+- TODO: cursor rendering, multi-output, dmabuf-feedback/presentation, direct scanout
