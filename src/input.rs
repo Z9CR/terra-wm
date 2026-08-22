@@ -1,10 +1,10 @@
 use smithay::{
     backend::input::{
         AbsolutePositionEvent, Axis, AxisSource, ButtonState, Event, InputBackend, InputEvent,
-        KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent,
+        KeyState, KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent,
     },
     input::{
-        keyboard::FilterResult,
+        keyboard::{FilterResult, Keysym, keysyms},
         pointer::{AxisFrame, ButtonEvent, MotionEvent},
     },
     reexports::wayland_server::protocol::wl_surface::WlSurface,
@@ -26,7 +26,17 @@ impl TerraWm {
                     event.state(),
                     serial,
                     time,
-                    |_, _, _| FilterResult::Forward,
+                    |state, modifiers, keysym| {
+                        // Super+Q quits the compositor (essential on a bare tty)
+                        if event.state() == KeyState::Pressed
+                            && modifiers.logo
+                            && keysym.modified_sym() == Keysym::from(keysyms::KEY_q)
+                        {
+                            tracing::info!("Super+Q pressed, quitting");
+                            state.loop_signal.stop();
+                        }
+                        FilterResult::Forward
+                    },
                 );
             }
             InputEvent::PointerMotion { .. } => {}
