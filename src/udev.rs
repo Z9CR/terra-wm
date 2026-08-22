@@ -266,6 +266,7 @@ impl DrmData {
         tracing::info!(?crtc, "drm output initialized");
 
         // kick off rendering
+        tracing::info!(?crtc, "scheduling first render");
         let drm_rc = Rc::clone(drm_data);
         let handle2 = handle.clone();
         handle.insert_idle(move |state| {
@@ -339,7 +340,7 @@ impl DrmData {
                 return;
             }
             post_render(state, &output);
-            tracing::debug!(?crtc, "frame queued");
+            tracing::info!(?crtc, "frame queued");
         } else {
             // no damage this round: retry after one frame to re-test
             self.schedule_render(drm_data, crtc, state, handle);
@@ -515,6 +516,7 @@ pub fn run_udev(command: Option<String>) -> Result<(), Box<dyn std::error::Error
 
     unsafe { std::env::set_var("WAYLAND_DISPLAY", &state.socket_name) };
     if let Some(command) = command {
+        tracing::info!(command, "spawning client");
         let mut cmd = std::process::Command::new("sh");
         cmd.arg("-c").arg(command);
         if let Err(e) = cmd.spawn() {
