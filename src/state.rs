@@ -173,6 +173,10 @@ pub struct ClientState {
 }
 
 impl ClientData for ClientState {
-    fn initialized(&self, _client_id: ClientId) {}
-    fn disconnected(&self, _client_id: ClientId, _reason: DisconnectReason) {}
+    fn initialized(&self, client_id: ClientId) {
+        tracing::info!(?client_id, "client connected");
+    }
+    fn disconnected(&self, client_id: ClientId, _reason: DisconnectReason) {
+        tracing::info!(?client_id, "client disconnected");
+    }
 }
